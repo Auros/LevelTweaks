@@ -1,0 +1,13 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/nike4613/ModSaber-MetadataFileSchema/master/Schema.json",
+  "author": "Auros",
+  "description": "Edit properties of a Beat Saber level and save them.",
+  "gameVersion": "1.6.0",
+  "id": "LevelTweaks",
+  "name": "LevelTweaks",
+  "version": "1.0.0",
+  "dependsOn": {
+
+  },
+  "features": []
+}

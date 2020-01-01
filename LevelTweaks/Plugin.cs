@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using IPA;
+﻿using IPA;
 using IPA.Config;
 using IPA.Utilities;
-using UnityEngine.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using IPALogger = IPA.Logging.Logger;
 
 namespace LevelTweaks
 {
-    public class Plugin : IBeatSaberPlugin
+    public class Plugin : IBeatSaberPlugin, IDisablablePlugin
     {
         internal static string Name => "LevelTweaks";
 
@@ -32,6 +28,18 @@ namespace LevelTweaks
                 }
                 config = v;
             });
+            Utilities.HarmonyUtil.InitHarmony("com.auros.leveltweaks");
+        }
+
+        public void OnEnable()
+        {
+            new GameObject().AddComponent<LevelTweaksManager>();
+            Utilities.HarmonyUtil.Patch();
+        }
+
+        public void OnDisable()
+        {
+            
         }
 
         public void OnApplicationStart()

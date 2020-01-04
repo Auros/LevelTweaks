@@ -17,7 +17,7 @@ using UnityEngine.UI;
 
 namespace LevelTweaks
 {
-    public class LevelTweaksManager : MonoBehaviour
+    public class LevelTweaksManager : NotifiableSingleton<LevelTweaksManager>
     {
         public static LevelTweaksManager Instance { get; set; }
 
@@ -26,10 +26,10 @@ namespace LevelTweaks
 
         [UIParams] public BSMLParserParams parserParams;
         [UIComponent("LTB")] public Button lt_button;
-        //[UIComponent("testtext")] public TextMeshProUGUI testtext;
+        [UIComponent("modal")] public ModalView modal;
         [UIComponent("list")] public CustomListTableData list;
 
-        private bool newInteractable = false;
+        private bool newInteractable = true;
         [UIValue("new-interactable")]
         public bool NewInteractable
         {
@@ -37,7 +37,8 @@ namespace LevelTweaks
             set
             {
                 newInteractable = value;
-                
+                NotifyPropertyChanged();
+
             }
         }
 
@@ -49,23 +50,113 @@ namespace LevelTweaks
             set
             {
                 deleteInteractable = value;
-                
+                NotifyPropertyChanged();
             }
         }
 
         [UIValue("v_offset")]
-        public float offset;
+        public float offset {
+            get => _offset;
+            set
+            {
+                _offset = value;
+                NotifyPropertyChanged();
+                UpdateThingy();
+            }
+        }
+        private float _offset;
 
         [UIValue("v_njs")]
-        public float njs;
+        public float njs {
+            get => _njs;
+            set
+            {
+                _njs = value;
+                NotifyPropertyChanged();
+                UpdateThingy();
+            }
+        }
+        private float _njs;
+
+        public void UpdateThingy()
+        {
+            if (curSel != 0)
+            {
+                var cell = list.data[curSel] as LevelTweak;
+                cell.njs = njs;
+                cell.offset = offset;
+            }
+        }
+
+        int curSel = 0;
+
+        [UIAction("newclicked")]
+        public void NewClicked()
+        {
+            var beatmap = standardView.selectedDifficultyBeatmap;
+            list.data.Add(new LevelTweak(new LevelTweakInfo() { njs = beatmap.noteJumpMovementSpeed, offset = beatmap.noteJumpStartBeatOffset, name = "Custom" }));
+            list.tableView.ReloadData();
+            list.tableView.SelectCellWithIdx(list.data.Count - 1, true);
+            UpdateSliders();
+            DeleteInteractable = list.data.Count != 1;
+        }
+
+        [UIAction("delclicked")]
+        public void DelClicked()
+        {
+            if ((list.data[curSel] as LevelTweak).text.ToLower().Contains("default"))
+                return;
+            list.data.Remove(list.data[curSel]);
+            list.tableView.ReloadData();
+            list.tableView.SelectCellWithIdx(0, true);
+            UpdateSliders();
+            DeleteInteractable = false;
+        }
 
         [UIAction("#post-parse")]
         public void Parsed()
         {
-            list.data.Add(new LevelTweak(new LevelTweakInfo() { njs = 17f, offset = 0f, name = "Default" }));
-            list.data.Add(new LevelTweak(new LevelTweakInfo() { njs = 18f, offset = 4f, name = "Custom" }));
-            list.data.Add(new LevelTweak(new LevelTweakInfo() { njs = 16f, offset = -5f, name = "Custom" }));
+            
+        }
+
+        [UIAction("s_list")]
+        public void Selected(TableView view, int pos)
+        {
+            
+            curSel = pos;
+            var beatmap = standardView.selectedDifficultyBeatmap;
+            if (pos == 0)
+            {
+                njs = beatmap.noteJumpMovementSpeed;
+                offset = beatmap.noteJumpStartBeatOffset;
+                DeleteInteractable = false;
+                UpdateSliders();
+                return;
+            }
+            DeleteInteractable = true;
+            njs = (list.data[pos] as LevelTweak).njs;
+            offset = (list.data[pos] as LevelTweak).offset;
+            Logger.log.Info($"offset: {offset}, local offset: {(list.data[pos] as LevelTweak).offset}, name: {(list.data[pos] as LevelTweak).text}");
+            UpdateSliders();
+        }
+
+        public void UpdateInfo()
+        {
+            var beatmap = standardView.selectedDifficultyBeatmap;
+            njs = beatmap.noteJumpMovementSpeed;
+            offset = beatmap.noteJumpStartBeatOffset;
+            list.data.Clear();
+            list.data.Add(new LevelTweak(new LevelTweakInfo() { njs = beatmap.noteJumpMovementSpeed, offset = beatmap.noteJumpStartBeatOffset, name = "Default" }));
             list.tableView.ReloadData();
+            list.tableView.SelectCellWithIdx(0, true);
+        }
+
+        public void UpdateSliders()
+        {
+            var s = modal.GetComponentInChildren<TimeSlider>();
+            s.value = offset;
+            var s2 = modal.GetComponentsInChildren<TimeSlider>().Last();
+            s2.value = njs;
         }
 
         void Awake()
@@ -88,7 +179,7 @@ namespace LevelTweaks
         [UIAction("button-clicked")]
         public void Show()
         {
-            //testtext.text = standardView.selectedDifficultyBeatmap.level.songName;
+            UpdateInfo();
             Logger.log.Info(standardView.selectedDifficultyBeatmap.level.songName);
         }
         

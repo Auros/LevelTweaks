@@ -1,82 +1,80 @@
-﻿using IPA;
-using IPA.Config;
-using IPA.Utilities;
-using UnityEngine;
-using UnityEngine.SceneManagement;
+﻿using BeatSaberMarkupLanguage.GameplaySetup;
 using IPALogger = IPA.Logging.Logger;
+using UnityEngine.SceneManagement;
+using IPA.Config.Stores;
+using System.Linq;
+using IPA.Config;
+using IPA;
+using UnityEngine;
+using HarmonyLib;
 
 namespace LevelTweaks
 {
-    public class Plugin : IBeatSaberPlugin, IDisablablePlugin
+    [Plugin(RuntimeOptions.DynamicInit)]
+    public class Plugin
     {
+        internal static Plugin Instance { get; private set; }
         internal static string Name => "LevelTweaks";
+        internal static Harmony harmony;
 
-        internal static Ref<PluginConfig> config;
-        internal static IConfigProvider configProvider;
-        public void Init(IPALogger logger, [Config.Prefer("json")] IConfigProvider cfgProvider)
+        internal static LevelFilteringNavigationController levelFilteringNavigationController;
+        internal static string lastSelectedMode = "Standard";
+        [Init]
+        public Plugin(IPALogger logger, Config conf)
         {
+            Instance = this;
             Logger.log = logger;
-            configProvider = cfgProvider;
-            config = configProvider.MakeLink<PluginConfig>((p, v) =>
-            {
-                if (v.Value == null || v.Value.RegenerateConfig)
-                {
-                    p.Store(v.Value = new PluginConfig()
-                    {
-                         
-                    });
-                }
-                config = v;
-            });
-            Utilities.HarmonyUtil.InitHarmony("com.auros.leveltweaks");
+            Configuration.Config.Instance = conf.Generated<Configuration.Config>();
+
         }
 
+        [OnEnable]
         public void OnEnable()
         {
-            new GameObject().AddComponent<LevelTweaksManager>();
-            Utilities.HarmonyUtil.Patch();
+            GameplaySetup.instance.AddTab("Level Tweaks", "LevelTweaks.UI.lt.bsml", UI.LTUI.instance);
+
+            SceneManager.activeSceneChanged += OnActiveSceneChanged;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+
+            harmony = new Harmony($"com.auros.BeatSaber.{Name}");
+            harmony.PatchAll(System.Reflection.Assembly.GetExecutingAssembly());
         }
 
+        [OnDisable]
         public void OnDisable()
         {
-            
-        }
+            harmony?.UnpatchAll();
 
-        public void OnApplicationStart()
-        {
-
-        }
-
-        public void OnApplicationQuit()
-        {
-
-        }
-
-        public void OnFixedUpdate()
-        {
-
-        }
-
-        public void OnUpdate()
-        {
-
+            SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
         }
 
         public void OnActiveSceneChanged(Scene prevScene, Scene nextScene)
         {
+            if (nextScene.name == "MenuViewControllers" && !levelFilteringNavigationController)
+                levelFilteringNavigationController = Resources.FindObjectsOfTypeAll<LevelFilteringNavigationController>().FirstOrDefault();
+            if (nextScene.name == "GameCore")
+            {
+                /*var data = BS_Utils.Plugin.LevelData.GameplayCoreSceneSetupData;
+                if (Configuration.Config.Instance.Tweaks.Any(x => x.LevelInfo.Equals(data.difficultyBeatmap, lastSelectedMode) && x.Selected))
+                {
+                    var tweak = Configuration.Config.Instance.Tweaks.Where(x => x.LevelInfo.Equals(data.difficultyBeatmap, lastSelectedMode) && x.Selected).FirstOrDefault();
+                    var go = new GameObject("Level Tweaker").AddComponent<LevelTweaker>();
+                    go.Load(tweak);
+                    Logger.log.Info($"offset: {tweak.Offset}, njs: {tweak.NJS}");
 
+                    if (tweak.NJS != data.difficultyBeatmap.noteJumpMovementSpeed)
+                        BS_Utils.Gameplay.ScoreSubmission.DisableSubmission("LevelTweaks");
+                    else
+                        BS_Utils.Gameplay.ScoreSubmission.DisableSubmission("LevelTweaks");
+                }*/
+
+            }
         }
 
-        public void OnSceneLoaded(Scene scene, LoadSceneMode sceneMode)
+        public void OnSceneLoaded(Scene scene, LoadSceneMode _)
         {
-
-
-
-        }
-
-        public void OnSceneUnloaded(Scene scene)
-        {
-
+            
         }
     }
 }

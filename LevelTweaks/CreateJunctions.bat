@@ -4,7 +4,7 @@ set DestPath=%~dp0
 
 if "%SourcePath%" == "" (
 	echo Enter the full path (without quotes^) to your Beat Saber game folder. Alternatively, you can drag and drop your Beat Saber folder onto this batch file to automatically make the junctions. 
-	set /p SourcePath="Path:C:\Program Files (x86)\Steam\steamapps\common\Beat Saber"
+	set /p SourcePath="Path:"
 )
 
 echo Source target: %SourcePath%

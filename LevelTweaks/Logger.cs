@@ -4,8 +4,7 @@ namespace LevelTweaks
 {
     internal static class Logger
     {
-        internal static IPALogger log { get; set; }
+        internal static IPALogger Log { get; set; }
 
-        internal static void Log(this object obj) => log.Info(obj.ToString());
     }
 }

@@ -2,24 +2,21 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="https://monkeymanboy.github.io/BSML-Docs/ https://raw.githubusercontent.com/monkeymanboy/BSML-Docs/gh-pages/BSMLSchema.xsd"
   anchor-pos-y="~y-pos">
-  <text text="~message" anchor-pos-x="0" anchor-pos-y="0" align="Center" size-delta-x="50" size-delta-y="10"/>
+  <text text="~message" anchor-pos-x="0" anchor-pos-y="-5" align="Center" size-delta-x="50" size-delta-y="5" />
   <vertical anchor-pos-x="-28">
-    <page-button click-event="tweak-list#PageUp" direction="Up"/>
-    <list id="tweak-list" list-style="Simple" select-cell="cell-clicked"/>
-    <page-button click-event="tweak-list#PageDown" direction="Down"/>
+    <page-button click-event="tweak-list#PageUp" direction="Up" pref-width="3" />
+    <list id="tweak-list" list-style="Simple" select-cell="cell-clicked" />
+    <page-button click-event="tweak-list#PageDown" direction="Down" pref-width="3" />
   </vertical>
   <modifier-container anchor-pos-x="30" anchor-pos-y="~y2-pos">
     <horizontal>
-      <img src="LevelTweaks.Assets.peepo.gif" pref-width="8" pref-height="8" preserve-aspect="true"/>
-      <img src="LevelTweaks.Assets.obama.png" pref-width="8" pref-height="8" preserve-aspect="true"/>
-      <img src="LevelTweaks.Assets.mio_honda.gif" pref-width="8" pref-height="8" preserve-aspect="true"/>
-      <img src="LevelTweaks.Assets.gaelican.png" pref-width="8" pref-height="8" preserve-aspect="true"/>
-      <img src="LevelTweaks.Assets.ninja.gif" pref-width="8" pref-height="8" preserve-aspect="true"/>
+      <img src="LevelTweaks.Assets.obama.png" pref-width="8" pref-height="8" preserve-aspect="true" />
+      <img src="LevelTweaks.Assets.gaelican.png" pref-width="8" pref-height="8" preserve-aspect="true" />
     </horizontal>
-    <button text="New" on-click="new"/>
-    <button text="Delete" on-click="delete" interactable="~can-delete"/>
-    <string-setting text="Name" value="name" get-event="set" apply-on-change="true" on-change="reload"/>
-    <increment-setting text="NJS" min="1" max="40" apply-on-change="true" integer-only="false" increment=".5" value="njs" get-event="set" on-change="reload"/>
-    <increment-setting text="OFF" min="-3" max="3" apply-on-change="true" integer-only="false" increment=".05" value="offset" get-event="set" on-change="reload"/>
+    <button text="New" on-click="new" pref-width="20" />
+    <button text="Delete" on-click="delete" interactable="~can-delete" pref-width="20" />
+    <string-setting text="Name" value="name" get-event="set" apply-on-change="true" on-change="reload" />
+    <increment-setting text="NJS" min="1" max="40" apply-on-change="true" integer-only="false" increment=".5" value="njs" get-event="set" on-change="reload" />
+    <increment-setting text="OFF" min="-3" max="3" apply-on-change="true" integer-only="false" increment=".05" value="offset" get-event="set" on-change="reload" />
   </modifier-container>
 </bg>

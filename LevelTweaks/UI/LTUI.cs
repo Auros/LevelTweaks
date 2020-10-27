@@ -1,24 +1,45 @@
-﻿using BeatSaberMarkupLanguage.Attributes;
-using BeatSaberMarkupLanguage.Components;
-using BeatSaberMarkupLanguage.Parser;
-using System.Collections.Generic;
-using LevelTweaks.Configuration;
-using BS_Utils.Utilities;
-using System.Collections;
-using IPA.Utilities;
-using UnityEngine;
-using System.Linq;
-using HMUI;
+﻿using HMUI;
 using System;
+using Zenject;
+using SiraUtil;
+using System.Linq;
+using UnityEngine;
+using IPA.Utilities;
+using System.Collections;
+using BS_Utils.Utilities;
+using System.ComponentModel;
+using LevelTweaks.Configuration;
+using System.Collections.Generic;
+using BeatSaberMarkupLanguage.Parser;
+using BeatSaberMarkupLanguage.Components;
+using BeatSaberMarkupLanguage.Attributes;
+using BeatSaberMarkupLanguage.GameplaySetup;
+using Config = LevelTweaks.Configuration.Config;
 
 namespace LevelTweaks.UI
 {
-    public class LTUI : NotifiableSingleton<LTUI> // *fuck*
+    public class LTUI : IInitializable, IDisposable, INotifyPropertyChanged
     {
-        public StandardLevelDetailView detailView;
+        private readonly Config _config;
+        private readonly StandardLevelDetailView _detailView;
+        private readonly LevelCollectionViewController _levelCollectionViewController;
+        private readonly StandardLevelDetailViewController _standardLevelDetailViewController;
+        private readonly LevelFilteringNavigationController _levelFilteringNavigationController;
+        private readonly BeatmapCharacteristicSegmentedControlController _beatmapCharacteristicSegmentedControlController;
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public TweakCell selectedTweak = new TweakCell(new TweakData() { Name = "Loading...", NJS = -999f, Offset = -999f });
         public int selectedIndex;
+
+        public LTUI(Config config, LevelCollectionViewController levelCollectionViewController, StandardLevelDetailViewController standardLevelDetailViewController, LevelFilteringNavigationController levelFilteringNavigationController)
+        {
+            _config = config;
+            _levelCollectionViewController = levelCollectionViewController;
+            _standardLevelDetailViewController = standardLevelDetailViewController;
+            _levelFilteringNavigationController = levelFilteringNavigationController;
+            _detailView = standardLevelDetailViewController.GetField<StandardLevelDetailView, StandardLevelDetailViewController>("_standardLevelDetailView");
+            _beatmapCharacteristicSegmentedControlController = _detailView.GetField<BeatmapCharacteristicSegmentedControlController, StandardLevelDetailView>("_beatmapCharacteristicSegmentedControlController");
+        }
 
         [UIComponent("tweak-list")]
         public CustomListTableData tweakList;
@@ -35,7 +56,7 @@ namespace LevelTweaks.UI
             set
             {
                 _ypos = value;
-                NotifyPropertyChanged();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(YPos)));
             }
         }
 
@@ -48,7 +69,7 @@ namespace LevelTweaks.UI
             set
             {
                 _y2pos = value;
-                NotifyPropertyChanged();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Y2Pos)));
             }
         }
 
@@ -60,7 +81,7 @@ namespace LevelTweaks.UI
             set
             {
                 _canDelete = value;
-                NotifyPropertyChanged();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CanDelete)));
             }
         }
 
@@ -72,11 +93,13 @@ namespace LevelTweaks.UI
             set
             {
                 _message = value;
-                NotifyPropertyChanged();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Message)));
             }
         }
 
         public float _scuff = -999f;
+
+
         [UIValue("name")]
         public string Name
         {
@@ -85,7 +108,7 @@ namespace LevelTweaks.UI
             {
                 if (selectedIndex != 0)
                     selectedTweak.data.Name = value;
-                NotifyPropertyChanged();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
             }
         }
 
@@ -97,7 +120,7 @@ namespace LevelTweaks.UI
             {
                 if (selectedIndex != 0)
                     selectedTweak.data.NJS = (float)Math.Round(value, 2);
-                NotifyPropertyChanged();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NJS)));
             }
         }
 
@@ -109,15 +132,14 @@ namespace LevelTweaks.UI
             {
                 if (selectedIndex != 0)
                     selectedTweak.data.Offset = (float)Math.Round(value, 2);
-                NotifyPropertyChanged();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Offset)));
             }
         }
 
         [UIAction("new")]
         public void New()
         {
-            var selected = detailView.selectedDifficultyBeatmap;
-            var charact = detailView.GetField<BeatmapCharacteristicSegmentedControlController, StandardLevelDetailView>("_beatmapCharacteristicSegmentedControlController");
+            var selected = _detailView.selectedDifficultyBeatmap;
             var newTweak = new TweakCell(new TweakData()
             {
                 Selected = true,
@@ -125,14 +147,14 @@ namespace LevelTweaks.UI
                 {
                     Difficulty = selected.difficulty.ToString(),
                     Hash = selected.level.levelID,
-                    Mode = charact.selectedBeatmapCharacteristic.serializedName
+                    Mode = _beatmapCharacteristicSegmentedControlController.selectedBeatmapCharacteristic.serializedName
                 },
                 Name = "Custom",
                 NJS = selected.noteJumpMovementSpeed,
                 Offset = selected.noteJumpStartBeatOffset
             });
             tweakList.data.Add(newTweak);
-            Configuration.Config.Instance.Tweaks.Add(newTweak.data);
+            _config.Tweaks.Add(newTweak.data);
 
             tweakList.tableView.ReloadData();
             tweakList.tableView.SelectCellWithIdx(tweakList.data.Count - 1, true);
@@ -141,7 +163,7 @@ namespace LevelTweaks.UI
         [UIAction("delete")]
         public void Delete()
         {
-            Configuration.Config.Instance.Tweaks.Remove(selectedTweak.data);
+            _config.Tweaks.Remove(selectedTweak.data);
             tweakList.data.Remove(selectedTweak);
             tweakList.tableView.ReloadData();
 
@@ -151,9 +173,6 @@ namespace LevelTweaks.UI
         [UIAction("#post-parse")]
         public void Parsed()
         {
-            detailView = Resources.FindObjectsOfTypeAll<StandardLevelDetailView>().FirstOrDefault();
-            Plugin.levelFilteringNavigationController.didSelectAnnotatedBeatmapLevelCollectionEvent -= LevelSelectionChanged;
-            Plugin.levelFilteringNavigationController.didSelectAnnotatedBeatmapLevelCollectionEvent += LevelSelectionChanged;
             Message = "Please select a level.";
         }
 
@@ -177,14 +196,9 @@ namespace LevelTweaks.UI
         }
 
         [UIAction("reload")]
-        public void Reload(object o)
+        public async void Reload(object _)
         {
-            StartCoroutine(QuickReload());
-        }
-
-        public IEnumerator QuickReload()
-        {
-            yield return new WaitForSeconds(.05f);
+            await Utilities.PauseChamp;
             int index = selectedIndex;
             for (int i = 0; i < tweakList.data.Count; i++)
             {
@@ -194,9 +208,6 @@ namespace LevelTweaks.UI
             tweakList.tableView.SelectCellWithIdx(index, false);
         }
 
-        private static bool IsEqualToOne(float value) => Math.Abs(value - 1) < 0.00001f;
-        
-
         public IEnumerator SetupTweakPage()
         {
             tweakList.data.Clear();
@@ -204,10 +215,10 @@ namespace LevelTweaks.UI
             CanDelete = false;
             Y2Pos = -100f;
             Message = "Loading...";
-            var prevMap = detailView.selectedDifficultyBeatmap;
-            yield return new WaitUntil(() => prevMap != detailView.selectedDifficultyBeatmap);
+            var prevMap = _detailView.selectedDifficultyBeatmap;
+            yield return new WaitUntil(() => prevMap != _detailView.selectedDifficultyBeatmap);
             Y2Pos = 3f;
-            var selected = detailView.selectedDifficultyBeatmap;
+            var selected = _detailView.selectedDifficultyBeatmap;
             if (selected == null)
             {
                 Message = "Error! Please click off and back on.";
@@ -221,7 +232,7 @@ namespace LevelTweaks.UI
                 yield break;
             }
             Message = "";
-            var charact = detailView.GetField<BeatmapCharacteristicSegmentedControlController, StandardLevelDetailView>("_beatmapCharacteristicSegmentedControlController");
+            var charact = _detailView.GetField<BeatmapCharacteristicSegmentedControlController, StandardLevelDetailView>("_beatmapCharacteristicSegmentedControlController");
             tweakList.data.Add(new TweakCell(new TweakData()
             {
                 LevelInfo = new TweakData.HashDifMode()
@@ -236,15 +247,19 @@ namespace LevelTweaks.UI
                 Selected = true
             }, true));
             Plugin.lastSelectedMode = charact.selectedBeatmapCharacteristic.serializedName;
-            List<TweakData> tweakData = Configuration.Config.Instance.Tweaks.Where(t => t.LevelInfo.Equals(selected, charact.selectedBeatmapCharacteristic.serializedName)).ToList();
+            List<TweakData> tweakData = _config.Tweaks.Where(t => t.LevelInfo.Equals(selected, charact.selectedBeatmapCharacteristic.serializedName)).ToList();
             List<TweakCell> cells = new List<TweakCell>();
             foreach (var t in tweakData)
+            {
                 cells.Add(new TweakCell(t));
+            }
             tweakList.data.AddRange(cells);
             tweakList.tableView.ReloadData();
 
             if (tweakData.Count() == 0 || !tweakData.Any(x => x.Selected))
+            {
                 tweakList.tableView.SelectCellWithIdx(0, true);
+            }
             else
             {
                 int index = -1;
@@ -260,32 +275,37 @@ namespace LevelTweaks.UI
             }
         }
 
-        public override void OnEnable()
+        public void Initialize()
         {
-            base.OnEnable();
-            BSEvents.characteristicSelected += LevelSelectionChanged;
-            BSEvents.difficultySelected += LevelSelectionChanged;
-            BSEvents.levelSelected += LevelSelectionChanged;
+            GameplaySetup.instance.AddTab("Level Tweaks", "LevelTweaks.UI.lt.bsml", this);
+            _beatmapCharacteristicSegmentedControlController.didSelectBeatmapCharacteristicEvent += LevelSelectionChanged;
+            _levelFilteringNavigationController.didSelectAnnotatedBeatmapLevelCollectionEvent += LevelSelectionChanged;
+            _standardLevelDetailViewController.didChangeDifficultyBeatmapEvent += LevelSelectionChanged;
+            _levelCollectionViewController.didSelectLevelEvent += LevelSelectionChanged;
         }
 
-        private void LevelSelectionChanged(bool forceHide = false) //Don't ask.
+        private void LevelSelectionChanged(bool forceHide = false)
         {
             YPos = forceHide ? -100f : 0;
             if (!forceHide)
             {
-                StartCoroutine(SetupTweakPage());
+                SharedCoroutineStarter.instance.StartCoroutine(SetupTweakPage());
             }
         }
 
         private void LevelSelectionChanged(object arg1, object arg2, object arg3, object arg4) => LevelSelectionChanged(true);
         private void LevelSelectionChanged(object arg1, object arg2) => LevelSelectionChanged();
 
-        public void OnDisable()
+        public void Dispose()
         {
-            BSEvents.characteristicSelected -= LevelSelectionChanged;
-            BSEvents.difficultySelected -= LevelSelectionChanged;
-            Plugin.levelFilteringNavigationController.didSelectAnnotatedBeatmapLevelCollectionEvent -= LevelSelectionChanged;
-            BSEvents.levelSelected -= LevelSelectionChanged;
+            if (GameplaySetup.IsSingletonAvailable)
+            {
+                GameplaySetup.instance.RemoveTab("Level Tweaks");
+            }
+            _beatmapCharacteristicSegmentedControlController.didSelectBeatmapCharacteristicEvent -= LevelSelectionChanged;
+            _levelFilteringNavigationController.didSelectAnnotatedBeatmapLevelCollectionEvent -= LevelSelectionChanged;
+            _standardLevelDetailViewController.didChangeDifficultyBeatmapEvent -= LevelSelectionChanged;
+            _levelCollectionViewController.didSelectLevelEvent -= LevelSelectionChanged;
         }
     }
 }

@@ -15,6 +15,8 @@ using BeatSaberMarkupLanguage.Components;
 using BeatSaberMarkupLanguage.Attributes;
 using BeatSaberMarkupLanguage.GameplaySetup;
 using Config = LevelTweaks.Configuration.Config;
+using BeatSaberMarkupLanguage;
+using Utilities = SiraUtil.Utilities;
 
 namespace LevelTweaks.UI
 {
@@ -33,6 +35,7 @@ namespace LevelTweaks.UI
 
         public LTUI(Config config, LevelCollectionViewController levelCollectionViewController, StandardLevelDetailViewController standardLevelDetailViewController, LevelFilteringNavigationController levelFilteringNavigationController)
         {
+            Y2Pos = -100f;
             _config = config;
             _levelCollectionViewController = levelCollectionViewController;
             _standardLevelDetailViewController = standardLevelDetailViewController;
@@ -120,6 +123,7 @@ namespace LevelTweaks.UI
             {
                 if (selectedIndex != 0)
                     selectedTweak.data.NJS = (float)Math.Round(value, 2);
+                DisablesScoreSubmission = NJS != _detailView.selectedDifficultyBeatmap.noteJumpMovementSpeed;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NJS)));
             }
         }
@@ -133,6 +137,18 @@ namespace LevelTweaks.UI
                 if (selectedIndex != 0)
                     selectedTweak.data.Offset = (float)Math.Round(value, 2);
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Offset)));
+            }
+        }
+
+        private bool _disablesScoreSubmission = false;
+        [UIValue("disables-score-submission")]
+        public bool DisablesScoreSubmission
+        {
+            get => _disablesScoreSubmission;
+            set
+            {
+                _disablesScoreSubmission = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisablesScoreSubmission)));
             }
         }
 
@@ -193,6 +209,7 @@ namespace LevelTweaks.UI
             Offset = selectedTweak.data.Offset;
 
             parserParams.EmitEvent("set");
+            DisablesScoreSubmission = NJS != _detailView.selectedDifficultyBeatmap.noteJumpMovementSpeed;
         }
 
         [UIAction("reload")]
@@ -216,12 +233,12 @@ namespace LevelTweaks.UI
             Y2Pos = -100f;
             Message = "Loading...";
             var prevMap = _detailView.selectedDifficultyBeatmap;
-            yield return new WaitUntil(() => prevMap != _detailView.selectedDifficultyBeatmap);
+            yield return new WaitUntil(() => prevMap != _detailView.selectedDifficultyBeatmap || (_detailView.selectedDifficultyBeatmap != null && prevMap == _detailView.selectedDifficultyBeatmap));
             Y2Pos = 3f;
             var selected = _detailView.selectedDifficultyBeatmap;
             if (selected == null)
             {
-                Message = "Error! Please click off and back on.";
+                Message = "Error! Please try again.";
                 Y2Pos = -100f;
                 yield break;
             }
@@ -256,6 +273,7 @@ namespace LevelTweaks.UI
             tweakList.data.AddRange(cells);
             tweakList.tableView.ReloadData();
 
+            DisablesScoreSubmission = NJS != selected.noteJumpMovementSpeed;
             if (tweakData.Count() == 0 || !tweakData.Any(x => x.Selected))
             {
                 tweakList.tableView.SelectCellWithIdx(0, true);
@@ -278,10 +296,8 @@ namespace LevelTweaks.UI
         public void Initialize()
         {
             GameplaySetup.instance.AddTab("Level Tweaks", "LevelTweaks.UI.lt.bsml", this);
-            _beatmapCharacteristicSegmentedControlController.didSelectBeatmapCharacteristicEvent += LevelSelectionChanged;
-            _levelFilteringNavigationController.didSelectAnnotatedBeatmapLevelCollectionEvent += LevelSelectionChanged;
-            _standardLevelDetailViewController.didChangeDifficultyBeatmapEvent += LevelSelectionChanged;
-            _levelCollectionViewController.didSelectLevelEvent += LevelSelectionChanged;
+            _standardLevelDetailViewController.didChangeContentEvent += DidContentChange;
+            _detailView.didChangeDifficultyBeatmapEvent += DidChange;
         }
 
         private void LevelSelectionChanged(bool forceHide = false)
@@ -293,19 +309,35 @@ namespace LevelTweaks.UI
             }
         }
 
-        private void LevelSelectionChanged(object arg1, object arg2, object arg3, object arg4) => LevelSelectionChanged(true);
-        private void LevelSelectionChanged(object arg1, object arg2) => LevelSelectionChanged();
-
         public void Dispose()
         {
-            if (GameplaySetup.IsSingletonAvailable)
+            if (GameplaySetup.IsSingletonAvailable && BSMLParser.IsSingletonAvailable)
             {
                 GameplaySetup.instance.RemoveTab("Level Tweaks");
             }
-            _beatmapCharacteristicSegmentedControlController.didSelectBeatmapCharacteristicEvent -= LevelSelectionChanged;
-            _levelFilteringNavigationController.didSelectAnnotatedBeatmapLevelCollectionEvent -= LevelSelectionChanged;
-            _standardLevelDetailViewController.didChangeDifficultyBeatmapEvent -= LevelSelectionChanged;
-            _levelCollectionViewController.didSelectLevelEvent -= LevelSelectionChanged;
+            _standardLevelDetailViewController.didChangeContentEvent -= DidContentChange;
+            _detailView.didChangeDifficultyBeatmapEvent -= DidChange;
+        }
+
+        private void DidContentChange(StandardLevelDetailViewController arg1, StandardLevelDetailViewController.ContentType arg2)
+        {
+            if (arg2 == StandardLevelDetailViewController.ContentType.OwnedAndReady || arg2 == StandardLevelDetailViewController.ContentType.Buy)
+            {
+                LevelSelectionChanged();
+            }
+            else
+            {
+                tweakList.data.Clear();
+                tweakList.tableView.ReloadData();
+                CanDelete = false;
+                Y2Pos = -100f;
+                Message = "Loading...";
+            }
+        }
+
+        private void DidChange(StandardLevelDetailView arg1, IDifficultyBeatmap arg2)
+        {
+            LevelSelectionChanged();
         }
     }
 }

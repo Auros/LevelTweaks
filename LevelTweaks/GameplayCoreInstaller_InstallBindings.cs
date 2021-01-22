@@ -29,10 +29,6 @@ namespace LevelTweaks
                     {
                         submit.DisableScoreSubmission("LevelTweaks", "Different NJS");
                     }
-                    if (tweak.Offset != setupData.difficultyBeatmap.noteJumpStartBeatOffset)
-                    {
-                        //submit.DisableScoreSubmission("LevelTweaks", "Different Offset");
-                    }
                     spawnControllerInitData.SetField("noteJumpMovementSpeed", tweak.NJS);
                     spawnControllerInitData.SetField("noteJumpStartBeatOffset", tweak.Offset);
                 }

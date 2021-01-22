@@ -1,22 +1,20 @@
 ﻿using HMUI;
 using System;
 using Zenject;
-using SiraUtil;
 using System.Linq;
 using UnityEngine;
 using IPA.Utilities;
 using System.Collections;
-using BS_Utils.Utilities;
 using System.ComponentModel;
+using BeatSaberMarkupLanguage;
 using LevelTweaks.Configuration;
 using System.Collections.Generic;
+using Utilities = SiraUtil.Utilities;
 using BeatSaberMarkupLanguage.Parser;
 using BeatSaberMarkupLanguage.Components;
 using BeatSaberMarkupLanguage.Attributes;
 using BeatSaberMarkupLanguage.GameplaySetup;
 using Config = LevelTweaks.Configuration.Config;
-using BeatSaberMarkupLanguage;
-using Utilities = SiraUtil.Utilities;
 
 namespace LevelTweaks.UI
 {

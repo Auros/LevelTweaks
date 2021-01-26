@@ -3,7 +3,7 @@
   "id": "LevelTweaks",
   "name": "LevelTweaks",
   "author": "Auros",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Modify and save different properties about a level. Commissioned by Gaelican",
   "gameVersion": "1.13.2",
   "dependsOn": {

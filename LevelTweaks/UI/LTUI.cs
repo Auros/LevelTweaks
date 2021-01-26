@@ -22,22 +22,18 @@ namespace LevelTweaks.UI
     {
         private readonly Config _config;
         private readonly StandardLevelDetailView _detailView;
-        private readonly LevelCollectionViewController _levelCollectionViewController;
         private readonly StandardLevelDetailViewController _standardLevelDetailViewController;
-        private readonly LevelFilteringNavigationController _levelFilteringNavigationController;
         private readonly BeatmapCharacteristicSegmentedControlController _beatmapCharacteristicSegmentedControlController;
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public TweakCell selectedTweak = new TweakCell(new TweakData() { Name = "Loading...", NJS = -999f, Offset = -999f });
+        public TweakCell selectedTweak = new TweakCell(new TweakData() { Name = "Loading...", NJS = -999f, Offset = -999f }, 128);
         public int selectedIndex;
 
-        public LTUI(Config config, LevelCollectionViewController levelCollectionViewController, StandardLevelDetailViewController standardLevelDetailViewController, LevelFilteringNavigationController levelFilteringNavigationController)
+        public LTUI(Config config, StandardLevelDetailViewController standardLevelDetailViewController)
         {
             Y2Pos = -100f;
             _config = config;
-            _levelCollectionViewController = levelCollectionViewController;
             _standardLevelDetailViewController = standardLevelDetailViewController;
-            _levelFilteringNavigationController = levelFilteringNavigationController;
             _detailView = standardLevelDetailViewController.GetField<StandardLevelDetailView, StandardLevelDetailViewController>("_standardLevelDetailView");
             _beatmapCharacteristicSegmentedControlController = _detailView.GetField<BeatmapCharacteristicSegmentedControlController, StandardLevelDetailView>("_beatmapCharacteristicSegmentedControlController");
         }
@@ -150,6 +146,18 @@ namespace LevelTweaks.UI
             }
         }
 
+        private bool _showEditor = false;
+        [UIValue("show-editor")]
+        public bool ShowEditor
+        {
+            get => _showEditor;
+            set
+            {
+                _showEditor = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowEditor)));
+            }
+        }
+
         [UIAction("new")]
         public void New()
         {
@@ -166,7 +174,7 @@ namespace LevelTweaks.UI
                 Name = "Custom",
                 NJS = selected.noteJumpMovementSpeed,
                 Offset = selected.noteJumpStartBeatOffset
-            });
+            }, selected.level.beatsPerMinute);
             tweakList.data.Add(newTweak);
             _config.Tweaks.Add(newTweak.data);
 
@@ -260,13 +268,13 @@ namespace LevelTweaks.UI
                 NJS = selected.noteJumpMovementSpeed,
                 Offset = selected.noteJumpStartBeatOffset,
                 Selected = true
-            }, true));
+            }, selected.level.beatsPerMinute, true));
             Plugin.lastSelectedMode = charact.selectedBeatmapCharacteristic.serializedName;
             List<TweakData> tweakData = _config.Tweaks.Where(t => t.LevelInfo.Equals(selected, charact.selectedBeatmapCharacteristic.serializedName)).ToList();
             List<TweakCell> cells = new List<TweakCell>();
             foreach (var t in tweakData)
             {
-                cells.Add(new TweakCell(t));
+                cells.Add(new TweakCell(t, selected.level.beatsPerMinute));
             }
             tweakList.data.AddRange(cells);
             tweakList.tableView.ReloadData();

@@ -15,6 +15,7 @@ using BeatSaberMarkupLanguage.Components;
 using BeatSaberMarkupLanguage.Attributes;
 using BeatSaberMarkupLanguage.GameplaySetup;
 using Config = LevelTweaks.Configuration.Config;
+using LevelTweaks.HarmonyPatches;
 
 namespace LevelTweaks.UI
 {
@@ -23,11 +24,12 @@ namespace LevelTweaks.UI
         private readonly Config _config;
         private readonly StandardLevelDetailView _detailView;
         private readonly StandardLevelDetailViewController _standardLevelDetailViewController;
-        private readonly BeatmapCharacteristicSegmentedControlController _beatmapCharacteristicSegmentedControlController;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public TweakCell selectedTweak = new TweakCell(new TweakData() { Name = "Loading...", NJS = -999f, Offset = -999f }, 128);
         public int selectedIndex;
+
+        private IDifficultyBeatmap selectedDifficultyBeatmap;
 
         public LTUI(Config config, StandardLevelDetailViewController standardLevelDetailViewController)
         {
@@ -35,7 +37,6 @@ namespace LevelTweaks.UI
             _config = config;
             _standardLevelDetailViewController = standardLevelDetailViewController;
             _detailView = standardLevelDetailViewController.GetField<StandardLevelDetailView, StandardLevelDetailViewController>("_standardLevelDetailView");
-            _beatmapCharacteristicSegmentedControlController = _detailView.GetField<BeatmapCharacteristicSegmentedControlController, StandardLevelDetailView>("_beatmapCharacteristicSegmentedControlController");
         }
 
         [UIComponent("tweak-list")]
@@ -117,7 +118,7 @@ namespace LevelTweaks.UI
             {
                 if (selectedIndex != 0)
                     selectedTweak.data.NJS = (float)Math.Round(value, 2);
-                DisablesScoreSubmission = NJS != _detailView.selectedDifficultyBeatmap.noteJumpMovementSpeed;
+                DisablesScoreSubmission = NJS != selectedDifficultyBeatmap.noteJumpMovementSpeed;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NJS)));
             }
         }
@@ -161,20 +162,19 @@ namespace LevelTweaks.UI
         [UIAction("new")]
         public void New()
         {
-            var selected = _detailView.selectedDifficultyBeatmap;
             var newTweak = new TweakCell(new TweakData()
             {
                 Selected = true,
                 LevelInfo = new TweakData.HashDifMode()
                 {
-                    Difficulty = selected.difficulty.ToString(),
-                    Hash = selected.level.levelID,
-                    Mode = _beatmapCharacteristicSegmentedControlController.selectedBeatmapCharacteristic.serializedName
+                    Difficulty = selectedDifficultyBeatmap.difficulty.ToString(),
+                    Hash = selectedDifficultyBeatmap.level.levelID,
+                    Mode = selectedDifficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic.serializedName
                 },
                 Name = "Custom",
-                NJS = selected.noteJumpMovementSpeed,
-                Offset = selected.noteJumpStartBeatOffset
-            }, selected.level.beatsPerMinute);
+                NJS = selectedDifficultyBeatmap.noteJumpMovementSpeed,
+                Offset = selectedDifficultyBeatmap.noteJumpStartBeatOffset
+            }, selectedDifficultyBeatmap.level.beatsPerMinute);
             tweakList.data.Add(newTweak);
             _config.Tweaks.Add(newTweak.data);
 
@@ -215,7 +215,7 @@ namespace LevelTweaks.UI
             Offset = selectedTweak.data.Offset;
 
             parserParams.EmitEvent("set");
-            DisablesScoreSubmission = NJS != _detailView.selectedDifficultyBeatmap.noteJumpMovementSpeed;
+            DisablesScoreSubmission = NJS != selectedDifficultyBeatmap.noteJumpMovementSpeed;
         }
 
         [UIAction("reload")]
@@ -231,55 +231,65 @@ namespace LevelTweaks.UI
             tweakList.tableView.SelectCellWithIdx(index, false);
         }
 
-        public IEnumerator SetupTweakPage()
+        public IEnumerator SetupTweakPage(IDifficultyBeatmap taDifficultyBeatmap = null)
         {
             tweakList.data.Clear();
             tweakList.tableView.ReloadData();
             CanDelete = false;
             Y2Pos = -100f;
             Message = "Loading...";
-            var prevMap = _detailView.selectedDifficultyBeatmap;
-            yield return new WaitUntil(() => prevMap != _detailView.selectedDifficultyBeatmap || (_detailView.selectedDifficultyBeatmap != null && prevMap == _detailView.selectedDifficultyBeatmap));
-            Y2Pos = 3f;
-            var selected = _detailView.selectedDifficultyBeatmap;
-            if (selected == null)
+
+            selectedDifficultyBeatmap = null;
+            if (taDifficultyBeatmap != null)
+            {
+                selectedDifficultyBeatmap = taDifficultyBeatmap;
+            }
+            else
+            {
+                var prevMap = _detailView.selectedDifficultyBeatmap;
+                yield return new WaitUntil(() => prevMap != _detailView.selectedDifficultyBeatmap || (_detailView.selectedDifficultyBeatmap != null && prevMap == _detailView.selectedDifficultyBeatmap));
+                Y2Pos = 3f;
+                selectedDifficultyBeatmap = _detailView.selectedDifficultyBeatmap;
+            }
+
+            if (selectedDifficultyBeatmap == null)
             {
                 Message = "Error! Please try again.";
                 Y2Pos = -100f;
                 yield break;
             }
-            if (!selected.level.levelID.ToLower().Contains("custom_level"))
+            if (!selectedDifficultyBeatmap.level.levelID.ToLower().Contains("custom_level"))
             {
                 Message = "This mod does not work with OSTs.";
                 Y2Pos = -100f;
                 yield break;
             }
             Message = "";
-            var charact = _detailView.GetField<BeatmapCharacteristicSegmentedControlController, StandardLevelDetailView>("_beatmapCharacteristicSegmentedControlController");
+            var charact = selectedDifficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic;
             tweakList.data.Add(new TweakCell(new TweakData()
             {
                 LevelInfo = new TweakData.HashDifMode()
                 {
-                    Difficulty = selected.difficulty.ToString(),
-                    Hash = selected.level.levelID,
-                    Mode = charact.selectedBeatmapCharacteristic.serializedName
+                    Difficulty = selectedDifficultyBeatmap.difficulty.ToString(),
+                    Hash = selectedDifficultyBeatmap.level.levelID,
+                    Mode = charact.serializedName
                 },
                 Name = "Default",
-                NJS = selected.noteJumpMovementSpeed,
-                Offset = selected.noteJumpStartBeatOffset,
+                NJS = selectedDifficultyBeatmap.noteJumpMovementSpeed,
+                Offset = selectedDifficultyBeatmap.noteJumpStartBeatOffset,
                 Selected = true
-            }, selected.level.beatsPerMinute, true));
-            Plugin.lastSelectedMode = charact.selectedBeatmapCharacteristic.serializedName;
-            List<TweakData> tweakData = _config.Tweaks.Where(t => t.LevelInfo.Equals(selected, charact.selectedBeatmapCharacteristic.serializedName)).ToList();
+            }, selectedDifficultyBeatmap.level.beatsPerMinute, true));
+            Plugin.lastSelectedMode = charact.serializedName;
+            List<TweakData> tweakData = _config.Tweaks.Where(t => t.LevelInfo.Equals(selectedDifficultyBeatmap, charact.serializedName)).ToList();
             List<TweakCell> cells = new List<TweakCell>();
             foreach (var t in tweakData)
             {
-                cells.Add(new TweakCell(t, selected.level.beatsPerMinute));
+                cells.Add(new TweakCell(t, selectedDifficultyBeatmap.level.beatsPerMinute));
             }
             tweakList.data.AddRange(cells);
             tweakList.tableView.ReloadData();
 
-            DisablesScoreSubmission = NJS != selected.noteJumpMovementSpeed;
+            DisablesScoreSubmission = NJS != selectedDifficultyBeatmap.noteJumpMovementSpeed;
             if (tweakData.Count() == 0 || !tweakData.Any(x => x.Selected))
             {
                 tweakList.tableView.SelectCellWithIdx(0, true);
@@ -304,14 +314,16 @@ namespace LevelTweaks.UI
             GameplaySetup.instance.AddTab("Level Tweaks", "LevelTweaks.UI.lt.bsml", this);
             _standardLevelDetailViewController.didChangeContentEvent += DidContentChange;
             _detailView.didChangeDifficultyBeatmapEvent += DidChange;
+            TADifficultySelected.TADifficultyBeatmapSelected += DidSelectTADifficultyBeatmap;
+            TADismissed.TARoomDismissed += TARoomDismissed;
         }
 
-        private void LevelSelectionChanged(bool forceHide = false)
+        private void LevelSelectionChanged(IDifficultyBeatmap taDifficultyBeatmap = null, bool forceHide = false)
         {
             YPos = forceHide ? -100f : 0;
             if (!forceHide)
             {
-                SharedCoroutineStarter.instance.StartCoroutine(SetupTweakPage());
+                SharedCoroutineStarter.instance.StartCoroutine(SetupTweakPage(taDifficultyBeatmap: taDifficultyBeatmap));
             }
         }
 
@@ -323,6 +335,17 @@ namespace LevelTweaks.UI
             }
             _standardLevelDetailViewController.didChangeContentEvent -= DidContentChange;
             _detailView.didChangeDifficultyBeatmapEvent -= DidChange;
+            TADifficultySelected.TADifficultyBeatmapSelected -= DidSelectTADifficultyBeatmap;
+            TADismissed.TARoomDismissed -= TARoomDismissed;
+        }
+
+        private void ClearContent()
+        {
+            tweakList.data.Clear();
+            tweakList.tableView.ReloadData();
+            CanDelete = false;
+            Y2Pos = -100f;
+            Message = "Loading...";
         }
 
         private void DidContentChange(StandardLevelDetailViewController arg1, StandardLevelDetailViewController.ContentType arg2)
@@ -333,17 +356,23 @@ namespace LevelTweaks.UI
             }
             else
             {
-                tweakList.data.Clear();
-                tweakList.tableView.ReloadData();
-                CanDelete = false;
-                Y2Pos = -100f;
-                Message = "Loading...";
+                ClearContent();
             }
         }
 
         private void DidChange(StandardLevelDetailView arg1, IDifficultyBeatmap arg2)
         {
             LevelSelectionChanged();
+        }
+
+        private void DidSelectTADifficultyBeatmap(IDifficultyBeatmap selectedDifficultyBeatmap)
+        {
+            LevelSelectionChanged(taDifficultyBeatmap: selectedDifficultyBeatmap);
+        }
+
+        private void TARoomDismissed()
+        {
+            ClearContent();
         }
     }
 }

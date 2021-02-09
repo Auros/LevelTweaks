@@ -171,6 +171,8 @@
   <ItemGroup>
     <Compile Include="GameplayCoreInstaller_InstallBindings.cs" />
     <Compile Include="Configuration\TweakData.cs" />
+    <Compile Include="HarmonyPatches\TADifficultySelected.cs" />
+    <Compile Include="HarmonyPatches\TADismissed.cs" />
     <Compile Include="Installers\LevelTweaksCoreInstaller.cs" />
     <Compile Include="Installers\LevelTweaksMenuInstaller.cs" />
     <Compile Include="Plugin.cs" />

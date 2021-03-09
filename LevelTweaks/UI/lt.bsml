@@ -19,7 +19,7 @@
     </horizontal>
     <string-setting active="~show-editor" text="Name" value="name" get-event="set" apply-on-change="true" on-change="reload" pref-width="50" />
     <increment-setting active="~can-delete" font-color="#ebc334" text="NJS" min="1" max="40" apply-on-change="true" integer-only="false" increment=".5" value="njs" get-event="set" on-change="reload" pref-width="50" />
-    <increment-setting active="~can-delete" text="OFFSET" font-size="3.5" min="-3" max="3" apply-on-change="true" integer-only="false" increment=".05" value="offset" get-event="set" on-change="reload" pref-width="50" />
+    <increment-setting active="~can-delete" text="OFFSET" font-size="3.5" min="-3" max="3" apply-on-change="true" integer-only="false" increment=".01" value="offset" get-event="set" on-change="reload" pref-width="50" />
   </modifier-container>
   <text active="~disables-score-submission" font-color="#ebc334" text="Score Submission Disabled" size-delta-x="0" size-delta-y="0" anchor-pos-x="0" anchor-pos-y="26.5" align="Center" />
 </bg>

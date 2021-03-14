@@ -4,6 +4,7 @@ using System.Linq;
 using IPA.Utilities;
 using SiraUtil.Services;
 using LevelTweaks.Configuration;
+using UnityEngine;
 
 namespace LevelTweaks
 {
@@ -25,7 +26,7 @@ namespace LevelTweaks
                 {
                     var tweak = config.Tweaks.Where(x => x.LevelInfo.Equals(setupData.difficultyBeatmap, Plugin.lastSelectedMode) && x.Selected).FirstOrDefault();
 
-                    if (tweak.NJS != setupData.difficultyBeatmap.noteJumpMovementSpeed)
+                    if (!Mathf.Approximately(tweak.NJS, setupData.difficultyBeatmap.noteJumpMovementSpeed))
                     {
                         submit.DisableScoreSubmission("LevelTweaks", "Different NJS");
                     }

@@ -3,9 +3,9 @@
   "id": "LevelTweaks",
   "name": "LevelTweaks",
   "author": "Auros",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Modify and save different properties about a level. Commissioned by Gaelican",
-  "gameVersion": "1.13.4",
+  "gameVersion": "1.13.5",
   "dependsOn": {
     "BSIPA": "^4.0.0",
     "SiraUtil": "^2.1.0",

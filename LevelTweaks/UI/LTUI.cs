@@ -116,8 +116,8 @@ namespace LevelTweaks.UI
             set
             {
                 if (selectedIndex != 0)
-                    selectedTweak.data.NJS = (float)Math.Round(value, 2);
-                DisablesScoreSubmission = NJS != _detailView.selectedDifficultyBeatmap.noteJumpMovementSpeed;
+                    selectedTweak.data.NJS = (float)Math.Round(value, 3);
+                DisablesScoreSubmission = !Mathf.Approximately(NJS, _detailView.selectedDifficultyBeatmap.noteJumpMovementSpeed);
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NJS)));
             }
         }
